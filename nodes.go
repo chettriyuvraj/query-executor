@@ -11,17 +11,17 @@ type Tuple struct {
 	data map[string]interface{}
 }
 
-type PlanNode interface { /* This is the iterator interface */
+type PlanNode interface { /* This is the iterator interface, every PlanNode will ideally have an inputs[] array as well, representing sources/children */
 	init() error
 	next() (Tuple, error)
 	close() error
 	getInputs() ([]PlanNode, error)
 }
 
-type ScanNode interface { // ended up unused, but scan nodes should ideally implement this (for)
+type ScanNode interface { // ended up unused, but scan nodes should ideally implement this
 }
 
-/*** Table ***/
+/*** Table - Represents a mock-up of an actual DB table ***/
 
 type Table struct {
 	headers []string
