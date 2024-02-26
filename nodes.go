@@ -1,6 +1,11 @@
 package main
 
-import "fmt"
+import (
+	"bufio"
+	"fmt"
+	"os"
+	"strings"
+)
 
 type Tuple struct {
 	data map[string]interface{}
@@ -61,6 +66,67 @@ func (tn *TableScanNode) close() error {
 
 func (tn *TableScanNode) getInputs() ([]PlanNode, error) {
 	return tn.inputs, nil
+}
+
+/*** File Scan Node ***/
+
+type FileScanNode struct {
+	idx     int
+	file    *os.File
+	scanner *bufio.Scanner
+	path    string
+	headers []string
+	// delimiter string Assuming newline as the delimiter always for now
+	inputs []PlanNode
+}
+
+func (fsn *FileScanNode) init() error {
+	file, err := os.Open(fsn.path)
+	if err != nil {
+		return err
+	}
+
+	fsn.scanner = bufio.NewScanner(file)
+	fsn.file = file
+	dataExists := fsn.scanner.Scan()
+	if !dataExists {
+		if err := fsn.scanner.Err(); err != nil {
+			return err
+		}
+		return fmt.Errorf("no header row found")
+	}
+	fsn.headers = strings.Split(fsn.scanner.Text(), ",")
+	return nil
+}
+
+func (fsn *FileScanNode) next() (Tuple, error) {
+	// Get data from scanner
+	dataExists := fsn.scanner.Scan()
+	if !dataExists {
+		if err := fsn.scanner.Err(); err != nil {
+			return Tuple{}, err
+		}
+		return Tuple{}, nil // EOF
+	}
+
+	// Add data to tuple according to headers (assume headers arranged in order of occurrence of field in file)
+	tuple := Tuple{}
+	textData := strings.Split(fsn.scanner.Text(), ",")
+	for i, header := range fsn.headers {
+		tuple.data[header] = textData[i]
+	}
+
+	fsn.idx++
+
+	return tuple, nil
+}
+
+func (fsn *FileScanNode) close() error {
+	return fsn.file.Close()
+}
+
+func (fsn *FileScanNode) getInputs() ([]PlanNode, error) {
+	return fsn.inputs, nil
 }
 
 /*** Projection Node ***/
