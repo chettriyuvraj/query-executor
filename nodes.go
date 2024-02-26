@@ -81,14 +81,19 @@ func (pn *ProjectionNode) next() (Tuple, error) {
 		return Tuple{}, err
 	}
 
-	// Confirm if all headers exist
+	// Confirm if all headers exist and remove remaining headers
 	data := nextTuple.data
-	for _, header := range pn.reqHeaders {
-		_, exists := data[header]
-		if !exists {
-			return Tuple{}, fmt.Errorf("header %v doesn't exist in table", header)
+	newData := map[string]interface{}{}
+	if data != nil {
+		for _, header := range pn.reqHeaders {
+			_, exists := data[header]
+			if !exists {
+				return Tuple{}, fmt.Errorf("header %v doesn't exist in table", header)
+			}
+			newData[header] = data[header]
 		}
 	}
+	nextTuple.data = newData
 
 	return nextTuple, nil
 }
@@ -114,13 +119,17 @@ func (ln *LimitNode) init() error {
 }
 
 func (ln *LimitNode) next() (Tuple, error) {
-	tuple := Tuple{}
-
 	if ln.offset >= ln.limit {
-		return tuple, nil
+		return Tuple{}, nil
 	}
 
-	return ln.inputs[0].next()
+	tuple, err := ln.inputs[0].next()
+	if err != nil {
+		return Tuple{}, err
+	}
+
+	ln.offset++
+	return tuple, nil
 }
 
 func (ln *LimitNode) close() error {
