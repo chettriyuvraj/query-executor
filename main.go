@@ -68,7 +68,7 @@ func main() {
 							cmpValue: "Action",
 							inputs: []PlanNode{
 								&FileScanNode{
-									path: "/Users/yuvrajchettri/Desktop/Development/query-executor/assets/movies.csv",
+									path: "./assets/movies.csv",
 								},
 							},
 						},
