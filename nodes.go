@@ -2,10 +2,6 @@ package main
 
 import "fmt"
 
-var COMMANDS = map[string]string{
-	"SELECT": "select",
-}
-
 type Tuple struct {
 	data map[string]interface{}
 }
