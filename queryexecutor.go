@@ -13,7 +13,6 @@ type QueryDescriptor struct {
 }
 
 type QueryExecutor struct {
-	queryDesc QueryDescriptor
 }
 
 func (qe *QueryExecutor) Execute(qd *QueryDescriptor) error {
