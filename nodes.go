@@ -112,6 +112,7 @@ func (fsn *FileScanNode) next() (Tuple, error) {
 	// Add data to tuple according to headers (assume headers arranged in order of occurrence of field in file)
 	tuple := Tuple{}
 	textData := strings.Split(fsn.scanner.Text(), ",")
+	tuple.data = map[string]interface{}{}
 	for i, header := range fsn.headers {
 		tuple.data[header] = textData[i]
 	}
