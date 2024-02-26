@@ -10,7 +10,7 @@ type PlanNode interface { /* This is the iterator interface */
 	init() error
 	next() (Tuple, error)
 	close() error
-	getInputs() []PlanNode
+	getInputs() ([]PlanNode, error)
 }
 
 type ScanNode interface {
@@ -33,10 +33,9 @@ func (t *Table) getData(idx int) map[string]interface{} {
 /*** Table Scan Node ***/
 
 type TableScanNode struct {
-	reqHeaders []string
-	table      Table
-	tableIdx   int
-	inputs     []PlanNode
+	table    Table
+	tableIdx int
+	inputs   []PlanNode
 }
 
 func (tn *TableScanNode) init() error {
