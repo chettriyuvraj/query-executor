@@ -16,9 +16,9 @@ func main() {
 
 	qd := QueryDescriptor{
 		cmd:  COMMANDS["SELECT"],
-		text: "SELECT id, genre from movies LIMIT 5",
+		text: "SELECT id, genre from movies LIMIT 2",
 		planNode: &LimitNode{
-			limit: 5,
+			limit: 2,
 			inputs: []PlanNode{
 				&ProjectionNode{
 					reqHeaders: []string{"id", "genre"},
