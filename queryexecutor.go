@@ -31,6 +31,9 @@ func (qe *QueryExecutor) ExecutePlan(qd *QueryDescriptor) error {
 		if err != nil {
 			return err
 		}
+		if nextTuple.data == nil {
+			break
+		}
 		res = append(res, nextTuple)
 	}
 	fmt.Println(res)
