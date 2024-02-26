@@ -10,7 +10,7 @@ type PlanNode interface { /* This is the iterator interface */
 	init() error
 	next() (Tuple, error)
 	close() error
-	getInputs() []*PlanNode
+	getInputs() []PlanNode
 }
 
 type ScanNode interface {
@@ -36,7 +36,7 @@ type TableScanNode struct {
 	reqHeaders []string
 	table      Table
 	tableIdx   int
-	inputs     []*PlanNode
+	inputs     []PlanNode
 }
 
 func (tn *TableScanNode) init() error {
@@ -60,7 +60,7 @@ func (tn *TableScanNode) close() error {
 	return nil
 }
 
-func (tn *TableScanNode) getInputs() ([]*PlanNode, error) {
+func (tn *TableScanNode) getInputs() ([]PlanNode, error) {
 	return tn.inputs, nil
 }
 
@@ -68,7 +68,7 @@ func (tn *TableScanNode) getInputs() ([]*PlanNode, error) {
 
 type ProjectionNode struct {
 	reqHeaders []string
-	inputs     []*PlanNode
+	inputs     []PlanNode
 }
 
 func (pn *ProjectionNode) init() error {
@@ -77,7 +77,7 @@ func (pn *ProjectionNode) init() error {
 
 func (pn *ProjectionNode) next() (Tuple, error) {
 	// Get next tuple
-	nextTuple, err := (*pn.inputs[0]).next()
+	nextTuple, err := pn.inputs[0].next()
 	if err != nil {
 		return Tuple{}, err
 	}
@@ -98,7 +98,7 @@ func (pn *ProjectionNode) close() error {
 	return nil
 }
 
-func (pn *ProjectionNode) getInputs() ([]*PlanNode, error) {
+func (pn *ProjectionNode) getInputs() ([]PlanNode, error) {
 	return pn.inputs, nil
 }
 
@@ -107,7 +107,7 @@ func (pn *ProjectionNode) getInputs() ([]*PlanNode, error) {
 type LimitNode struct {
 	offset int
 	limit  int
-	inputs []*PlanNode
+	inputs []PlanNode
 }
 
 func (ln *LimitNode) init() error {
@@ -121,13 +121,13 @@ func (ln *LimitNode) next() (Tuple, error) {
 		return tuple, nil
 	}
 
-	return (*ln.inputs[0]).next()
+	return ln.inputs[0].next()
 }
 
 func (ln *LimitNode) close() error {
 	return nil
 }
 
-func (ln *LimitNode) getInputs() ([]*PlanNode, error) {
+func (ln *LimitNode) getInputs() ([]PlanNode, error) {
 	return ln.inputs, nil
 }
