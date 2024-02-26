@@ -206,3 +206,45 @@ func (ln *LimitNode) close() error {
 func (ln *LimitNode) getInputs() ([]PlanNode, error) {
 	return ln.inputs, nil
 }
+
+/*** Filter Node ***/
+type FilterNode struct { // single condition
+	header   string // header on which we are checking condition
+	operator string
+	cmpValue string // assuming all values string for now
+	inputs   []PlanNode
+}
+
+func (fn *FilterNode) init() error {
+	return nil
+}
+
+func (fn *FilterNode) next() (Tuple, error) {
+	nextTuple, err := fn.inputs[0].next()
+	if err != nil {
+		return Tuple{}, err
+	}
+
+	if nextTuple.data != nil {
+		switch op := fn.operator; op {
+		case "=":
+			value, exists := nextTuple.data[fn.header]
+			if !exists {
+				return Tuple{}, fmt.Errorf("header %v doesn't exist to filter", fn.header)
+			}
+			if value != fn.cmpValue {
+				return fn.next()
+			}
+		}
+	}
+
+	return nextTuple, nil
+}
+
+func (fn *FilterNode) close() error {
+	return nil
+}
+
+func (fn *FilterNode) getInputs() ([]PlanNode, error) {
+	return fn.inputs, nil
+}

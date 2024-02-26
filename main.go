@@ -4,6 +4,7 @@ import "fmt"
 
 func main() {
 
+	/*** Mock table query ***/
 	// table := Table{
 	// 	headers: []string{"id", "name", "genre"},
 	// 	data: []map[string]interface{}{
@@ -32,17 +33,44 @@ func main() {
 	// 	},
 	// }
 
+	/*** Actual table query ***/
+	// qd := QueryDescriptor{
+	// 	cmd:  COMMANDS["SELECT"],
+	// 	text: "SELECT movieId, genres from movies LIMIT 100",
+	// 	planNode: &LimitNode{
+	// 		limit: 100,
+	// 		inputs: []PlanNode{
+	// 			&ProjectionNode{
+	// 				reqHeaders: []string{"movieId", "genres"},
+	// 				inputs: []PlanNode{
+	// &FileScanNode{
+	// 	path: "/Users/yuvrajchettri/Desktop/Development/query-executor/assets/movies.csv",
+	// },
+	// 				},
+	// 			},
+	// 		},
+	// 	},
+	// }
+
+	/*** Actual table query with filter ***/
 	qd := QueryDescriptor{
 		cmd:  COMMANDS["SELECT"],
-		text: "SELECT movieId, genres from movies LIMIT 3",
+		text: "SELECT movieId, genres from movies LIMIT 100 WHERE genres = 'Action'",
 		planNode: &LimitNode{
-			limit: 3,
+			limit: 100,
 			inputs: []PlanNode{
 				&ProjectionNode{
 					reqHeaders: []string{"movieId", "genres"},
 					inputs: []PlanNode{
-						&FileScanNode{
-							path: "/Users/yuvrajchettri/Desktop/Development/query-executor/assets/movies.csv",
+						&FilterNode{
+							header:   "genres",
+							operator: "=",
+							cmpValue: "Action",
+							inputs: []PlanNode{
+								&FileScanNode{
+									path: "/Users/yuvrajchettri/Desktop/Development/query-executor/assets/movies.csv",
+								},
+							},
 						},
 					},
 				},
