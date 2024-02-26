@@ -26,6 +26,7 @@ func (qe *QueryExecutor) Execute(qd *QueryDescriptor) error {
 
 func (qe *QueryExecutor) ExecutePlan(qd *QueryDescriptor) error {
 	res := []Tuple{}
+	qe.InitPlan(qd)
 	for {
 		nextTuple, err := qd.planNode.next()
 		if err != nil {
@@ -36,6 +37,45 @@ func (qe *QueryExecutor) ExecutePlan(qd *QueryDescriptor) error {
 		}
 		res = append(res, nextTuple)
 	}
+	qe.FinishPlan(qd)
 	fmt.Println(res)
+	return nil
+}
+
+func (qe *QueryExecutor) InitPlan(qd *QueryDescriptor) error {
+	curNode := qd.planNode
+	for curNode != nil {
+		// init cur node
+		err := curNode.init()
+		if err != nil {
+			return err
+		}
+
+		// move to next node in pipeline
+		inputs, err := curNode.getInputs()
+		if err != nil {
+			return err
+		}
+		curNode = inputs[0] //assuming single input nodes always
+	}
+	return nil
+}
+
+func (qe *QueryExecutor) FinishPlan(qd *QueryDescriptor) error {
+	curNode := qd.planNode
+	for curNode != nil {
+		// close cur node
+		err := curNode.close()
+		if err != nil {
+			return err
+		}
+
+		// move to next node in the pipeline
+		inputs, err := curNode.getInputs()
+		if err != nil {
+			return err
+		}
+		curNode = inputs[0] //assuming single input nodes always
+	}
 	return nil
 }
