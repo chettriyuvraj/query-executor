@@ -48,14 +48,6 @@ func (tn *TableScanNode) next() (Tuple, error) {
 	data := tn.table.getData(tn.tableIdx)
 	tuple := Tuple{data: data}
 
-	// Confirm if all headers exist
-	for _, header := range tn.reqHeaders {
-		_, exists := data[header]
-		if !exists {
-			return Tuple{}, fmt.Errorf("header doesn't exist in table")
-		}
-	}
-
 	// increase table index count
 	if data != nil {
 		tn.tableIdx++
@@ -70,6 +62,44 @@ func (tn *TableScanNode) close() error {
 
 func (tn *TableScanNode) getInputs() ([]*PlanNode, error) {
 	return tn.inputs, nil
+}
+
+/*** Projection Node ***/
+
+type ProjectionNode struct {
+	reqHeaders []string
+	inputs     []*PlanNode
+}
+
+func (pn *ProjectionNode) init() error {
+	return nil
+}
+
+func (pn *ProjectionNode) next() (Tuple, error) {
+	// Get next tuple
+	nextTuple, err := (*pn.inputs[0]).next()
+	if err != nil {
+		return Tuple{}, err
+	}
+
+	// Confirm if all headers exist
+	data := nextTuple.data
+	for _, header := range pn.reqHeaders {
+		_, exists := data[header]
+		if !exists {
+			return Tuple{}, fmt.Errorf("header %v doesn't exist in table", header)
+		}
+	}
+
+	return nextTuple, nil
+}
+
+func (pn *ProjectionNode) close() error {
+	return nil
+}
+
+func (pn *ProjectionNode) getInputs() ([]*PlanNode, error) {
+	return pn.inputs, nil
 }
 
 /*** Limit Node ***/
