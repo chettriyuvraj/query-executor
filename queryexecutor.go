@@ -56,7 +56,12 @@ func (qe *QueryExecutor) InitPlan(qd *QueryDescriptor) error {
 		if err != nil {
 			return err
 		}
-		curNode = inputs[0] //assuming single input nodes always
+		if len(inputs) > 0 {
+			curNode = inputs[0] //assuming single input nodes always
+		} else {
+			curNode = nil
+		}
+
 	}
 	return nil
 }
@@ -75,7 +80,12 @@ func (qe *QueryExecutor) FinishPlan(qd *QueryDescriptor) error {
 		if err != nil {
 			return err
 		}
-		curNode = inputs[0] //assuming single input nodes always
+
+		if len(inputs) > 0 {
+			curNode = inputs[0] //assuming single input nodes always
+		} else {
+			curNode = nil
+		}
 	}
 	return nil
 }
