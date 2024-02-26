@@ -18,7 +18,7 @@ type PlanNode interface { /* This is the iterator interface */
 	getInputs() ([]PlanNode, error)
 }
 
-type ScanNode interface {
+type ScanNode interface { // ended up unused, but scan nodes should ideally implement this (for)
 }
 
 /*** Table ***/
