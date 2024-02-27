@@ -61,8 +61,33 @@ Design:
     - sl: 64 bytes (string large)
 - Our format makes it easy to support random access, because of the fixed-width fields, any random access to ith record is a simple matter of arithmetic
 - In essence, they are chunks
-- Completely self contained is difficult. Lets assume all files will be stored in the same directory, name of file will be same as name of directory, and all pages will be in a single file. 8KB pages, so again distinguishing between pages will be simple arithmetic
-- Reserve 8 bytes at the start for the number of records filled so far
+- Completely self contained is difficult. Lets assume all files will be stored in the same (current) directory, name of file will be same as name of directory, and all pages will be in a single file. 8KB pages, so again distinguishing between pages will be simple arithmetic
+- De-facto header:  
+    - Reserve 8 bytes at the start for the number of records filled so far
+    - 1 byte for number of fields
+    - Next 1 byte * number of field bits for indicating their type (00 ss, 01 sm, 10 sl) (not very efficient)
+    - First record indicates the column names, all of type sl (always)
+    - next 'n' records are the actual tuples
+- We aren't considering the problem of capping a file size as of now (eg. pages must always be completely within a file)
+
+
+
+## Plan
+
+- Let's have an underlying struct YcFile represent the file. Fields:
+    - tableName representing the table name
+    - file underlying os file - if not nil then it is open
+    - Write method()
+        - calls open first
+        - validates the byte data depending on the table, fields etc (must be one complete tuple, anything greater not written)
+        - finally writes 
+    - Open() first checks if file is null, checks assets folder if file with tableName exists, if not then creates and generates header, sets file field to opened file
+    - validate()
+    - Read() - similar to write, call open, then read
+
+
+- YcFileWriter
+    - 
 
 
 
