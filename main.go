@@ -52,7 +52,52 @@ func main() {
 	// 	},
 	// }
 
-	/*** Actual table query with filter ***/
+	/*** Actual CSV file query with filter ***/
+	// qd := QueryDescriptor{
+	// 	cmd:  COMMANDS["SELECT"],
+	// 	text: "SELECT movieId, genres from movies LIMIT 100 WHERE genres = 'Action'",
+	// 	planNode: &LimitNode{
+	// 		limit: 100,
+	// 		inputs: []PlanNode{
+	// 			&ProjectionNode{
+	// 				reqHeaders: []string{"movieId", "genres"},
+	// 				inputs: []PlanNode{
+	// 					&FilterNode{
+	// 						header:   "genres",
+	// 						operator: "=",
+	// 						cmpValue: "Action",
+	// 						inputs: []PlanNode{
+	// 							&CSVScanNode{
+	// 								path: "./assets/movies.csv",
+	// 							},
+	// 						},
+	// 					},
+	// 				},
+	// 			},
+	// 		},
+	// 	},
+	// }
+
+	/* Custom file format - YCFile Query with no filter */
+	// qd := QueryDescriptor{
+	// 	cmd:  COMMANDS["SELECT"],
+	// 	text: "SELECT movieId, genres from movies LIMIT 100 WHERE genres = 'Action'",
+	// 	planNode: &LimitNode{
+	// 		limit: 100,
+	// 		inputs: []PlanNode{
+	// 			&ProjectionNode{
+	// 				reqHeaders: []string{"movieId", "genres", "title"},
+	// 				inputs: []PlanNode{
+	// 					&FileScanNode{
+	// 						path: "./assets/movies",
+	// 					},
+	// 				},
+	// 			},
+	// 		},
+	// 	},
+	// }
+
+	/* Custom file format - YCFile Query with filter */
 	qd := QueryDescriptor{
 		cmd:  COMMANDS["SELECT"],
 		text: "SELECT movieId, genres from movies LIMIT 100 WHERE genres = 'Action'",
@@ -65,10 +110,10 @@ func main() {
 						&FilterNode{
 							header:   "genres",
 							operator: "=",
-							cmpValue: "Action",
+							cmpValue: "Romance",
 							inputs: []PlanNode{
-								&CSVScanNode{
-									path: "./assets/movies.csv",
+								&FileScanNode{
+									path: "./assets/movies",
 								},
 							},
 						},
