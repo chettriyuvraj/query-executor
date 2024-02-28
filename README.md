@@ -102,6 +102,7 @@ Design:
 - Nevertheless, it works
 - I would like to create a general diagram to explain my file format
 - The query executor is very neat in terms of it's plug-and-play nature, worked very nicely!
+- Code for ycfile package could be refactored(?), have to look into it!
 
 
 
