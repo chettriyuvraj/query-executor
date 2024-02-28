@@ -43,7 +43,7 @@ func main() {
 	// 			&ProjectionNode{
 	// 				reqHeaders: []string{"movieId", "genres"},
 	// 				inputs: []PlanNode{
-	// &FileScanNode{
+	// &CSVScanNode{
 	// 	path: "/Users/yuvrajchettri/Desktop/Development/query-executor/assets/movies.csv",
 	// },
 	// 				},
@@ -67,7 +67,7 @@ func main() {
 							operator: "=",
 							cmpValue: "Action",
 							inputs: []PlanNode{
-								&FileScanNode{
+								&CSVScanNode{
 									path: "./assets/movies.csv",
 								},
 							},

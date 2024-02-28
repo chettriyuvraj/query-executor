@@ -70,7 +70,7 @@ func (tn *TableScanNode) getInputs() ([]PlanNode, error) {
 
 /*** File Scan Node ***/
 
-type FileScanNode struct {
+type CSVScanNode struct {
 	idx     int
 	file    *os.File
 	scanner *bufio.Scanner
@@ -80,7 +80,7 @@ type FileScanNode struct {
 	inputs []PlanNode
 }
 
-func (fsn *FileScanNode) init() error {
+func (fsn *CSVScanNode) init() error {
 	file, err := os.Open(fsn.path)
 	if err != nil {
 		return err
@@ -99,7 +99,7 @@ func (fsn *FileScanNode) init() error {
 	return nil
 }
 
-func (fsn *FileScanNode) next() (Tuple, error) {
+func (fsn *CSVScanNode) next() (Tuple, error) {
 	// Get data from scanner
 	dataExists := fsn.scanner.Scan()
 	if !dataExists {
@@ -122,11 +122,11 @@ func (fsn *FileScanNode) next() (Tuple, error) {
 	return tuple, nil
 }
 
-func (fsn *FileScanNode) close() error {
+func (fsn *CSVScanNode) close() error {
 	return fsn.file.Close()
 }
 
-func (fsn *FileScanNode) getInputs() ([]PlanNode, error) {
+func (fsn *CSVScanNode) getInputs() ([]PlanNode, error) {
 	return fsn.inputs, nil
 }
 
