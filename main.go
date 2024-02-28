@@ -81,9 +81,9 @@ func main() {
 	/* Custom file format - YCFile Query with no filter */
 	// qd := QueryDescriptor{
 	// 	cmd:  COMMANDS["SELECT"],
-	// 	text: "SELECT movieId, genres from movies LIMIT 100 WHERE genres = 'Action'",
+	// 	text: "SELECT movieId, genres from movies LIMIT 6",
 	// 	planNode: &LimitNode{
-	// 		limit: 100,
+	// 		limit: 6,
 	// 		inputs: []PlanNode{
 	// 			&ProjectionNode{
 	// 				reqHeaders: []string{"movieId", "genres", "title"},
@@ -100,9 +100,9 @@ func main() {
 	/* Custom file format - YCFile Query with filter */
 	qd := QueryDescriptor{
 		cmd:  COMMANDS["SELECT"],
-		text: "SELECT movieId, genres from movies LIMIT 100 WHERE genres = 'Action'",
+		text: "SELECT movieId, genres from movies LIMIT 2 WHERE genres = 'Romance'",
 		planNode: &LimitNode{
-			limit: 100,
+			limit: 2,
 			inputs: []PlanNode{
 				&ProjectionNode{
 					reqHeaders: []string{"movieId", "genres"},
