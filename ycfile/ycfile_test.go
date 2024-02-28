@@ -32,7 +32,7 @@ func TestCreateYCFile(t *testing.T) {
 	fieldsHeader := getFieldsFromHeader(res, fieldCount)
 	expectedFieldsHeader := []byte{}
 	for _, field := range fields {
-		fieldAsStringLong, err := stringToStringLong(field)
+		fieldAsStringLong, err := castStringToFieldType(STRINGLONG, field)
 		require.NoError(t, err)
 		expectedFieldsHeader = append(expectedFieldsHeader, []byte(fieldAsStringLong)...)
 	}
