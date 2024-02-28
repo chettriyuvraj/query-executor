@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Test not very readable hmm
+// Refer to header format to understand this test
 func TestCreateYCFile(t *testing.T) {
 	fields := []string{"movieId", "title", "genres"}
 	fieldTypes := []byte{0, 2, 1} // ss, sl, sm
@@ -25,10 +25,10 @@ func TestCreateYCFile(t *testing.T) {
 	_, err = f.Read(res)
 	require.NoError(t, err)
 
-	numberOfRecordsHeader := res[:8]
-	numberOfFieldsHeader := res[8:9]
-	fieldTypesHeader := res[9:12] // field types written to header
-	fieldsHeader := res[12 : 12+(FIELDTYPESTOLENGTH[2]*3)]
+	recordCountHeader := res[:8]
+	fieldCountHeader := res[8:9]
+	fieldTypesHeader := res[9:12]                          // 00 indicates ss, 01 indicates sm, 10 indicates sl
+	fieldsHeader := res[12 : 12+(FIELDTYPESTOLENGTH[2]*3)] // first 3 tuples are the column names, all of type sl, remaining bits are filled with "\n"
 	expectedFieldsHeader := []byte{}
 	for _, h := range fields {
 		remainingBits := FIELDTYPESTOLENGTH[2] - len(h)
@@ -36,8 +36,8 @@ func TestCreateYCFile(t *testing.T) {
 		expectedFieldsHeader = append(expectedFieldsHeader, []byte(strings.Repeat("\n", remainingBits))...) // fixed-width fields -> pad remaining with \n
 	}
 
-	require.Equal(t, []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, numberOfRecordsHeader)
-	require.Equal(t, []byte{3}, numberOfFieldsHeader)
+	require.Equal(t, []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, recordCountHeader)
+	require.Equal(t, []byte{3}, fieldCountHeader)
 	require.Equal(t, fieldTypes, fieldTypesHeader)
 	require.Equal(t, expectedFieldsHeader, fieldsHeader)
 }
