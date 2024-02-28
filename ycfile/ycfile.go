@@ -26,12 +26,12 @@ var FIELDTYPESTOLENGTH map[byte]int = map[byte]int{
 }
 
 type YCFileRecord struct {
-	data []StringPair
+	Data []StringPair
 }
 
 type StringPair struct {
-	key string
-	val string
+	Key string
+	Val string
 }
 
 type YCFile struct {
@@ -190,9 +190,9 @@ func (w *YCFileWriter) Write(record YCFileRecord) error { // assuming the file i
 	}
 
 	buf := []byte{} // write to a buffer, then write to the file
-	for i, pair := range record.data {
+	for i, pair := range record.Data {
 		fieldType := ycf.headerFieldTypes[i]
-		dataAsFieldType, err := castStringToFieldType(fieldType, pair.val)
+		dataAsFieldType, err := castStringToFieldType(fieldType, pair.Val)
 		if err != nil {
 			return err
 		}
@@ -261,8 +261,8 @@ func (r *YCFileReader) Read() (YCFileRecord, error) { // assuming header is alre
 		columnNameToString := strings.Split(string(curColumnName), PADDINGBYTE)[0]
 
 		// join both as a pair
-		dataPair := StringPair{key: columnNameToString, val: string(valToString)}
-		record.data = append(record.data, dataPair)
+		dataPair := StringPair{Key: columnNameToString, Val: string(valToString)}
+		record.Data = append(record.Data, dataPair)
 	}
 
 	return record, nil
@@ -355,8 +355,8 @@ func (w *YCFileWriter) validateRecordWithFile(record YCFileRecord) error {
 	// comparing if the field names in the provided record match the field names in the file header
 	areRecordFieldsEqualToHeaderFields := func() (bool, error) {
 		recordFieldsAsStringLong := []byte{}
-		for _, recordPair := range record.data {
-			fieldAsStringLong, err := castStringToFieldType(STRINGLONG, recordPair.key)
+		for _, recordPair := range record.Data {
+			fieldAsStringLong, err := castStringToFieldType(STRINGLONG, recordPair.Key)
 			if err != nil {
 				return false, err
 			}

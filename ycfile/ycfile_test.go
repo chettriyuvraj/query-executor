@@ -52,9 +52,9 @@ func TestReadWrite(t *testing.T) {
 	err := CreateYCFile(path, fields, fieldTypes)
 	require.NoError(t, err)
 
-	r1 := YCFileRecord{data: []StringPair{{key: "movieId", val: "123"}, {key: "title", val: "Love You Zindagi"}, {key: "genres", val: "Romance"}}}
-	r2 := YCFileRecord{data: []StringPair{{key: "movieId", val: "124"}, {key: "title", val: "Sholay"}, {key: "genres", val: "Comedy | Romance"}}}
-	r3 := YCFileRecord{data: []StringPair{{key: "movieId", val: "125"}, {key: "title", val: "Chole"}, {key: "genres", val: "Food | Thriller"}}}
+	r1 := YCFileRecord{Data: []StringPair{{Key: "movieId", Val: "123"}, {Key: "title", Val: "Love You Zindagi"}, {Key: "genres", Val: "Romance"}}}
+	r2 := YCFileRecord{Data: []StringPair{{Key: "movieId", Val: "124"}, {Key: "title", Val: "Sholay"}, {Key: "genres", Val: "Comedy | Romance"}}}
+	r3 := YCFileRecord{Data: []StringPair{{Key: "movieId", Val: "125"}, {Key: "title", Val: "Chole"}, {Key: "genres", Val: "Food | Thriller"}}}
 
 	writer, err := NewYCFileWriter(path)
 	require.NoError(t, err)
