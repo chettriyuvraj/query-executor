@@ -268,6 +268,13 @@ func (r *YCFileReader) Read() (YCFileRecord, error) { // assuming header is alre
 	return record, nil
 }
 
+func (w *YCFileReader) Close() error { // assuming the file is already a valid YCFile
+	if err := w.ycf.file.Close(); err != nil {
+		return err
+	}
+	return nil
+}
+
 /*** Helpers, all helpers are in context of YCFiles only ***/
 
 func fileExists(path string) (bool, error) {
