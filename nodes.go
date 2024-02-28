@@ -109,7 +109,7 @@ func (csvn *CSVScanNode) next() (Tuple, error) {
 		if err := csvn.scanner.Err(); err != nil {
 			return Tuple{}, err
 		}
-		return Tuple{data: nil}, nil // EOF
+		return Tuple{}, nil // EOF
 	}
 
 	// Add data to tuple according to headers (assume headers arranged in order of occurrence of field in file)
@@ -156,7 +156,7 @@ func (fsn *FileScanNode) next() (Tuple, error) {
 	ycfRecord, err := fsn.reader.Read()
 	if err != nil {
 		if err == io.EOF {
-			return Tuple{data: nil}, nil // EOF
+			return Tuple{}, nil // EOF
 		}
 		return Tuple{}, err
 	}
@@ -251,7 +251,7 @@ func (ln *LimitNode) init() error {
 
 func (ln *LimitNode) next() (Tuple, error) {
 	if ln.offset >= ln.limit {
-		return Tuple{data: nil}, nil
+		return Tuple{}, nil
 	}
 
 	tuple, err := ln.inputs[0].next()
