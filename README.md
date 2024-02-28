@@ -88,7 +88,20 @@ Design:
 
 
 - YcFileWriter
-    - 
+
+
+## Thoughts post implementation
+
+- Ended up creating 3 different structs:
+    - YCFile
+    - YCFileWriter
+    - YCFileReader
+- My tests are in general very coarse grained, but still sped up the process quite nicely
+- The mechanics of my file format in terms of efficiency etc , I don't think I have given much thought to either speed or space efficiency
+- Tbh it's quite convoluted :P
+- Nevertheless, it works
+- I would like to create a general diagram to explain my file format
+- The query executor is very neat in terms of it's plug-and-play nature, worked very nicely!
 
 
 
