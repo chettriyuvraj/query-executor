@@ -20,16 +20,16 @@ func TestCreateYCFile(t *testing.T) {
 	f, err := os.Open(path)
 	require.NoError(t, err)
 
-	headerLength := getYCFileHeaderLength(fieldCount)
+	headerLength := getHeaderLength(fieldCount)
 	res := make([]byte, headerLength)
 	_, err = f.Read(res)
 	require.NoError(t, err)
 
-	magicNumberRecord := getMagicNumberFromYCFileHeader(res)
-	recordCountHeader := getRecordCountFromYCFileHeader(res)
-	fieldCountHeader := getFieldCountFromYCFileHeader(res)
-	fieldTypesHeader := getFieldTypesFromYCFileHeader(res, fieldCount)
-	fieldsHeader := getFieldsFromYCFileHeader(res, fieldCount)
+	magicNumberRecord := getMagicNumberFromHeader(res)
+	recordCountHeader := getRecordCountFromHeader(res)
+	fieldCountHeader := getFieldCountFromHeader(res)
+	fieldTypesHeader := getFieldTypesFromHeader(res, fieldCount)
+	fieldsHeader := getFieldsFromHeader(res, fieldCount)
 	expectedFieldsHeader := []byte{}
 	for _, field := range fields {
 		fieldAsStringLong, err := stringToStringLong(field)

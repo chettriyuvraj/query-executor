@@ -94,10 +94,22 @@ func (w *YCFileWriter) Write(record YCFileRecord, path string) error {
 	if !alreadyExists {
 		return fmt.Errorf("first create file, no such file %s exists to write to", path)
 	}
+
+	headerLength := getHeaderLength(len(record))
+	header := make([]byte, headerLength)
+	f, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	_, err = f.Read(header)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
-/*** Helpers ***/
+/*** Helpers, all helpers are in context of YCFiles only ***/
 
 func fileExists(path string) (bool, error) {
 	_, err := os.Stat(path)
@@ -111,27 +123,27 @@ func fileExists(path string) (bool, error) {
 	return true, nil
 }
 
-func getYCFileHeaderLength(fieldCount int) int {
+func getHeaderLength(fieldCount int) int {
 	return 4 + 8 + 1 + fieldCount + (FIELDTYPESTOLENGTH[2] * fieldCount) // refer to header format
 }
 
-func getMagicNumberFromYCFileHeader(b []byte) []byte {
+func getMagicNumberFromHeader(b []byte) []byte {
 	return b[:4]
 }
 
-func getRecordCountFromYCFileHeader(b []byte) []byte {
+func getRecordCountFromHeader(b []byte) []byte {
 	return b[4:12]
 }
 
-func getFieldCountFromYCFileHeader(b []byte) []byte {
+func getFieldCountFromHeader(b []byte) []byte {
 	return b[12:13]
 }
 
-func getFieldTypesFromYCFileHeader(b []byte, fieldCount int) []byte {
+func getFieldTypesFromHeader(b []byte, fieldCount int) []byte {
 	return b[13 : 13+fieldCount]
 }
 
-func getFieldsFromYCFileHeader(b []byte, fieldCount int) []byte {
+func getFieldsFromHeader(b []byte, fieldCount int) []byte {
 	return b[13+fieldCount : 13+fieldCount+(FIELDTYPESTOLENGTH[2]*3)]
 }
 
