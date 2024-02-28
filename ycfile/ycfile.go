@@ -1,6 +1,7 @@
 package ycfile
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"strings"
@@ -8,13 +9,18 @@ import (
 
 const MAXFIELDS = 255
 
+var MAGICNUMBER []byte = []byte{0x31, 0x08, 0x19, 0x98}
+
 var FIELDTYPESTOLENGTH map[byte]int = map[byte]int{
 	0: 16, // "ss" string small,
 	1: 32, // "sm" string medium,
 	2: 64, // "sl" string large,
 }
 
+type YCFileRecord map[string]string
+
 // - De-facto header:
+// 	   - magic number 4 bytes 0x31081998
 //     - Reserve 8 bytes at the start for the number of records filled so far
 //     - 1 byte for number of fields
 //     - Next 1 byte * number of field bits for indicating their type (00 ss, 01 sm, 10 sl) (not very efficient)
@@ -41,9 +47,10 @@ func CreateYCFile(path string, fields []string, fieldTypes []byte) error {
 			return fmt.Errorf("unable to seek and write header on underlying file")
 		}
 
-		b := []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00} // number of records so far
-		b = append(b, byte(len(fields)))                            // number of fields
-		for _, fieldType := range fieldTypes {                      // verifying field types
+		b := bytes.Clone(MAGICNUMBER)                                            // magic number
+		b = append(b, []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}...) // number of records so far
+		b = append(b, byte(len(fields)))                                         // number of fields
+		for _, fieldType := range fieldTypes {                                   // verifying field types
 			_, exists := FIELDTYPESTOLENGTH[fieldType]
 			if !exists {
 				return fmt.Errorf("invalid fieldtype")

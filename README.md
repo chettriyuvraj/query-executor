@@ -63,6 +63,7 @@ Design:
 - In essence, they are chunks
 - Completely self contained is difficult. Lets assume all files will be stored in the same (current) directory, name of file will be same as name of directory, and all pages will be in a single file. 8KB pages, so again distinguishing between pages will be simple arithmetic
 - De-facto header:  
+    - magic number 4 bytes
     - Reserve 8 bytes at the start for the number of records filled so far
     - 1 byte for number of fields
     - Next 1 byte * number of field bits for indicating their type (00 ss, 01 sm, 10 sl) (not very efficient)
