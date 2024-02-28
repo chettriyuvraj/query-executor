@@ -8,6 +8,7 @@ import (
 )
 
 const MAXFIELDS = 255
+const PADDINGBYTE = "\n"
 
 var MAGICNUMBER []byte = []byte{0x31, 0x08, 0x19, 0x98}
 
@@ -18,6 +19,9 @@ var FIELDTYPESTOLENGTH map[byte]int = map[byte]int{
 }
 
 type YCFileRecord map[string]string
+
+type YCFileWriter struct {
+}
 
 // - De-facto header:
 // 	   - magic number 4 bytes 0x31081998
@@ -58,13 +62,12 @@ func CreateYCFile(path string, fields []string, fieldTypes []byte) error {
 		}
 		b = append(b, fieldTypes...) // field types
 
-		for _, fieldName := range fields { // first record is the column names
-			if len(fieldName) > FIELDTYPESTOLENGTH[2] {
-				return fmt.Errorf("field length cannot be longer than %d", FIELDTYPESTOLENGTH[2])
+		for _, fieldName := range fields { // first record is the column names, all as type stringLong
+			fieldAsStringLong, err := stringToStringLong(fieldName)
+			if err != nil {
+				return err
 			}
-			remainingBits := FIELDTYPESTOLENGTH[2] - len(fieldName)
-			b = append(b, []byte(fieldName)...)
-			b = append(b, []byte(strings.Repeat("\n", remainingBits))...) // fixed-width fields -> pad remaining with \n
+			b = append(b, []byte(fieldAsStringLong)...)
 		}
 
 		_, err = f.Write(b)
@@ -81,4 +84,61 @@ func CreateYCFile(path string, fields []string, fieldTypes []byte) error {
 	}
 
 	return nil
+}
+
+func (w *YCFileWriter) Write(record YCFileRecord, path string) error {
+	alreadyExists, err := fileExists(path)
+	if err != nil {
+		return err
+	}
+	if !alreadyExists {
+		return fmt.Errorf("first create file, no such file %s exists to write to", path)
+	}
+	return nil
+}
+
+/*** Helpers ***/
+
+func fileExists(path string) (bool, error) {
+	_, err := os.Stat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+		return false, nil
+	}
+
+	return true, nil
+}
+
+func getYCFileHeaderLength(fieldCount int) int {
+	return 4 + 8 + 1 + fieldCount + (FIELDTYPESTOLENGTH[2] * fieldCount) // refer to header format
+}
+
+func getMagicNumberFromYCFileHeader(b []byte) []byte {
+	return b[:4]
+}
+
+func getRecordCountFromYCFileHeader(b []byte) []byte {
+	return b[4:12]
+}
+
+func getFieldCountFromYCFileHeader(b []byte) []byte {
+	return b[12:13]
+}
+
+func getFieldTypesFromYCFileHeader(b []byte, fieldCount int) []byte {
+	return b[13 : 13+fieldCount]
+}
+
+func getFieldsFromYCFileHeader(b []byte, fieldCount int) []byte {
+	return b[13+fieldCount : 13+fieldCount+(FIELDTYPESTOLENGTH[2]*3)]
+}
+
+func stringToStringLong(s string) (string, error) {
+	stringLongLen := FIELDTYPESTOLENGTH[2]
+	if len(s) > stringLongLen {
+		return "", fmt.Errorf("string %s length %d longer than type stringlong", s, len(s))
+	}
+	return fmt.Sprintf("%s%s", s, strings.Repeat(PADDINGBYTE, stringLongLen-len(s))), nil
 }
