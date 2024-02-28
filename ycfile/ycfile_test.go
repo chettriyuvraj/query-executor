@@ -28,8 +28,8 @@ func TestCreateYCFile(t *testing.T) {
 	magicNumberRecord := getMagicNumberFromHeader(res)
 	recordCountHeader := getRecordCountFromHeader(res)
 	fieldCountHeader := getFieldCountFromHeader(res)
-	fieldTypesHeader := getFieldTypesFromHeader(res, fieldCount)
-	fieldsHeader := getFieldsFromHeader(res, fieldCount)
+	fieldTypesHeader := getFieldTypesFromHeader(res, int(fieldCountHeader[0]))
+	fieldsHeader := getFieldsFromHeader(res, int(fieldCountHeader[0]))
 	expectedFieldsHeader := []byte{}
 	for _, field := range fields {
 		fieldAsStringLong, err := castStringToFieldType(STRINGLONG, field)
