@@ -3,8 +3,11 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"strings"
+
+	"github.com/chettriyuvraj/query-executor/ycfile"
 )
 
 type Tuple struct {
@@ -68,7 +71,7 @@ func (tn *TableScanNode) getInputs() ([]PlanNode, error) {
 	return tn.inputs, nil
 }
 
-/*** File Scan Node ***/
+/*** CSV Scan Node ***/
 
 type CSVScanNode struct {
 	idx     int
@@ -80,30 +83,30 @@ type CSVScanNode struct {
 	inputs []PlanNode
 }
 
-func (fsn *CSVScanNode) init() error {
-	file, err := os.Open(fsn.path)
+func (csvn *CSVScanNode) init() error {
+	file, err := os.Open(csvn.path)
 	if err != nil {
 		return err
 	}
 
-	fsn.scanner = bufio.NewScanner(file)
-	fsn.file = file
-	dataExists := fsn.scanner.Scan()
+	csvn.scanner = bufio.NewScanner(file)
+	csvn.file = file
+	dataExists := csvn.scanner.Scan()
 	if !dataExists {
-		if err := fsn.scanner.Err(); err != nil {
+		if err := csvn.scanner.Err(); err != nil {
 			return err
 		}
 		return fmt.Errorf("no header row found")
 	}
-	fsn.headers = strings.Split(fsn.scanner.Text(), ",")
+	csvn.headers = strings.Split(csvn.scanner.Text(), ",")
 	return nil
 }
 
-func (fsn *CSVScanNode) next() (Tuple, error) {
+func (csvn *CSVScanNode) next() (Tuple, error) {
 	// Get data from scanner
-	dataExists := fsn.scanner.Scan()
+	dataExists := csvn.scanner.Scan()
 	if !dataExists {
-		if err := fsn.scanner.Err(); err != nil {
+		if err := csvn.scanner.Err(); err != nil {
 			return Tuple{}, err
 		}
 		return Tuple{}, nil // EOF
@@ -111,23 +114,83 @@ func (fsn *CSVScanNode) next() (Tuple, error) {
 
 	// Add data to tuple according to headers (assume headers arranged in order of occurrence of field in file)
 	tuple := Tuple{}
-	textData := strings.Split(fsn.scanner.Text(), ",")
+	textData := strings.Split(csvn.scanner.Text(), ",")
 	tuple.data = map[string]interface{}{}
-	for i, header := range fsn.headers {
+	for i, header := range csvn.headers {
 		tuple.data[header] = textData[i]
 	}
 
-	fsn.idx++
+	csvn.idx++
 
 	return tuple, nil
 }
 
-func (fsn *CSVScanNode) close() error {
-	return fsn.file.Close()
+func (csvn *CSVScanNode) close() error {
+	return csvn.file.Close()
 }
 
-func (fsn *CSVScanNode) getInputs() ([]PlanNode, error) {
+func (csvn *CSVScanNode) getInputs() ([]PlanNode, error) {
+	return csvn.inputs, nil
+}
+
+/*** File Scan Node ***/
+
+type FileScanNode struct {
+	idx    int
+	reader *ycfile.YCFileReader
+	path   string
+	inputs []PlanNode
+}
+
+func (fsn *FileScanNode) init() error {
+	reader, err := ycfile.NewYCFileReader(fsn.path)
+	if err != nil {
+		return err
+	}
+	fsn.reader = reader
+
+	return nil
+}
+
+func (fsn *FileScanNode) next() (Tuple, error) {
+	ycfRecord, err := fsn.reader.Read()
+	if err != nil {
+		if err == io.EOF {
+			return Tuple{}, nil // EOF
+		}
+		return Tuple{}, err
+	}
+
+	fsn.idx++
+	tuple := ycfRecordToTuple(ycfRecord) // This tuple contains all fields in table
+	// filteredTuple := Tuple{}                      // Filtering out only the requested headers
+	// for _, header := range fsn.headers {
+	// 	if val, exists := allFieldsTuple.data[header]; !exists {
+	// 		return Tuple{}, fmt.Errorf("header %s does not exist in current table", header)
+	// 	} else {
+	// 		filteredTuple.data[header] = val
+	// 	}
+	// }
+
+	return tuple, err //  Should we be converting or should everything be returned as YCFRecord?
+
+}
+
+func (fsn *FileScanNode) close() error {
+	return fsn.reader.Close()
+}
+
+func (fsn *FileScanNode) getInputs() ([]PlanNode, error) {
 	return fsn.inputs, nil
+}
+
+func ycfRecordToTuple(ycfRecord ycfile.YCFileRecord) Tuple {
+	tuple := Tuple{data: make(map[string]interface{})}
+	for _, pair := range ycfRecord.Data {
+		k, v := pair.Key, pair.Val
+		tuple.data[k] = v
+	}
+	return tuple
 }
 
 /*** Projection Node ***/
