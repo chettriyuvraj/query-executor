@@ -10,6 +10,7 @@ import (
 )
 
 const MAXFIELDS = 255
+const PAGESIZE = 8192
 const PADDINGBYTE = "\n"
 const (
 	STRINGSMALL = iota
@@ -275,7 +276,7 @@ func (w *YCFileReader) Close() error { // assuming the file is already a valid Y
 	return nil
 }
 
-/*** Helpers, all helpers are in context of YCFiles only ***/
+/*** Helpers ***/
 
 func fileExists(path string) (bool, error) {
 	_, err := os.Stat(path)
@@ -287,30 +288,6 @@ func fileExists(path string) (bool, error) {
 	}
 
 	return true, nil
-}
-
-func getHeaderLength(fieldCount int) int {
-	return 4 + 8 + 1 + fieldCount + (FIELDTYPESTOLENGTH[2] * fieldCount) // refer to header format
-}
-
-func getMagicNumberFromHeader(b []byte) []byte {
-	return b[:4]
-}
-
-func getRecordCountFromHeader(b []byte) []byte {
-	return b[4:12]
-}
-
-func getFieldCountFromHeader(b []byte) []byte {
-	return b[12:13]
-}
-
-func getFieldTypesFromHeader(b []byte, fieldCount int) []byte {
-	return b[13 : 13+fieldCount]
-}
-
-func getFieldsFromHeader(b []byte, fieldCount int) []byte {
-	return b[13+fieldCount : 13+fieldCount+(FIELDTYPESTOLENGTH[2]*3)]
 }
 
 func castStringToFieldType(fieldType byte, s string) (string, error) {
@@ -382,3 +359,33 @@ func (ycf *YCFile) computeSizeOfARecord() int {
 	}
 	return sizeOfRecord
 }
+
+func (ycf *YCFile) getHeaderLength() int {
+	fieldCount := int(ycf.headerFieldCount[0])
+	return 4 + 8 + 1 + fieldCount + (FIELDTYPESTOLENGTH[2] * fieldCount) // refer to header format
+}
+
+func (ycf *YCFile) getMagicNumberFromHeader(b []byte) []byte {
+	return b[:4]
+}
+
+func (ycf *YCFile) getRecordCountFromHeader(b []byte) []byte {
+	return b[4:12]
+}
+
+func (ycf *YCFile) getFieldCountFromHeader(b []byte) []byte {
+	return b[12:13]
+}
+
+func (ycf *YCFile) getFieldTypesFromHeader(b []byte, fieldCount int) []byte {
+	return b[13 : 13+fieldCount]
+}
+
+func (ycf *YCFile) getFieldsFromHeader(b []byte, fieldCount int) []byte {
+	return b[13+fieldCount : 13+fieldCount+(FIELDTYPESTOLENGTH[2]*3)]
+}
+
+// func (ycf *YCFile) computePageSize() int { // returns page size in bytes: header + records
+// 	header := 13 // magic number + number of records header + number of fields header
+
+// }
