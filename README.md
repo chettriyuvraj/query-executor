@@ -105,4 +105,14 @@ Design:
 - Code for ycfile package could be refactored(?), have to look into it!
 
 
+## B+ Tree index
+
+Set of intermediate milestones for designing and implementing the tree:
+
+- How will the index point to actual records on disk i.e. our custom file format
+    - Let's see, our file format has a single header, not a page-wise 
+    - Let's say we create an index on "movieTitle", our index would simply have the title as the key and the "pointer" would be the record number, since we can seek to the correct position using simple arithmetic
+
+- Let's implement an in-memory B+ tree next
+    - Our structure is as follows: BPlusTree -> BPlusTreeNode(interface type) -> BPlusTreeIndexElem / BPlusTreeLeafElem
 
