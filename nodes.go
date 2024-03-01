@@ -162,18 +162,9 @@ func (fsn *FileScanNode) next() (Tuple, error) {
 	}
 
 	fsn.idx++
-	tuple := ycfRecordToTuple(ycfRecord) // This tuple contains all fields in table
-	// filteredTuple := Tuple{}                      // Filtering out only the requested headers
-	// for _, header := range fsn.headers {
-	// 	if val, exists := allFieldsTuple.data[header]; !exists {
-	// 		return Tuple{}, fmt.Errorf("header %s does not exist in current table", header)
-	// 	} else {
-	// 		filteredTuple.data[header] = val
-	// 	}
-	// }
+	tuple := ycfRecordToTuple(ycfRecord) // This tuple contains all fields in table - filtering is handled by projection nodes
 
 	return tuple, err //  Should we be converting or should everything be returned as YCFRecord?
-
 }
 
 func (fsn *FileScanNode) close() error {
