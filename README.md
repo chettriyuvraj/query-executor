@@ -116,3 +116,12 @@ Set of intermediate milestones for designing and implementing the tree:
 - Let's implement an in-memory B+ tree next
     - Our structure is as follows: BPlusTree -> BPlusTreeNode(interface type) -> BPlusTreeIndexElem / BPlusTreeLeafElem
 
+
+
+
+## Joins
+
+Nested Loop Join
+
+- The naive version of nested loop join would simply involve reading the two files and running a predicate function
+    - simply take in the path for the two files and the predicate and run
