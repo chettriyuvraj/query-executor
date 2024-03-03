@@ -23,6 +23,7 @@ type PlanNode interface { /* This is the iterator interface, every PlanNode will
 	close() error
 	reset() error
 	getInputs() ([]PlanNode, error)
+	setInputs(inps []PlanNode)
 }
 
 func resetPlanNode(pn PlanNode) error {
@@ -95,6 +96,10 @@ func (tn *TableScanNode) reset() error {
 	return resetPlanNode(tn)
 }
 
+func (tn *TableScanNode) setInputs(inps []PlanNode) {
+	tn.inputs = inps
+}
+
 /*** CSV Scan Node ***/
 
 type CSVScanNode struct {
@@ -162,6 +167,10 @@ func (csvn *CSVScanNode) reset() error {
 	return csvn.init()
 }
 
+func (csvn *CSVScanNode) setInputs(inps []PlanNode) {
+	csvn.inputs = inps
+}
+
 /*** YCF File Scan Node ***/
 
 type FileScanNode struct {
@@ -206,6 +215,10 @@ func (fsn *FileScanNode) getInputs() ([]PlanNode, error) {
 
 func (fsn *FileScanNode) reset() error {
 	return nil // TO DO: implement reset
+}
+
+func (fsn *FileScanNode) setInputs(inps []PlanNode) {
+	fsn.inputs = inps
 }
 
 func ycfRecordToTuple(ycfRecord ycfile.YCFileRecord) Tuple {
@@ -265,6 +278,10 @@ func (pn *ProjectionNode) reset() error {
 	return resetPlanNode(pn)
 }
 
+func (pn *ProjectionNode) setInputs(inps []PlanNode) {
+	pn.inputs = inps
+}
+
 /*** Limit Node ***/
 type LimitNode struct {
 	offset int
@@ -300,6 +317,10 @@ func (ln *LimitNode) getInputs() ([]PlanNode, error) {
 
 func (ln *LimitNode) reset() error {
 	return resetPlanNode(ln)
+}
+
+func (ln *LimitNode) setInputs(inps []PlanNode) {
+	ln.inputs = inps
 }
 
 /*** Filter Node ***/
@@ -346,6 +367,10 @@ func (fn *FilterNode) getInputs() ([]PlanNode, error) {
 
 func (fn *FilterNode) reset() error {
 	return resetPlanNode(fn)
+}
+
+func (fn *FilterNode) setInputs(inps []PlanNode) {
+	fn.inputs = inps
 }
 
 /*** Average Node ***/
@@ -400,6 +425,10 @@ func (an *AvgNode) getInputs() ([]PlanNode, error) {
 
 func (an *AvgNode) reset() error {
 	return resetPlanNode(an)
+}
+
+func (an *AvgNode) setInputs(inps []PlanNode) {
+	an.inputs = inps
 }
 
 /*** IndexScan Node ***/
@@ -504,6 +533,10 @@ func (njn *NaiveNestedJoinNode) getInputs() ([]PlanNode, error) {
 
 func (njn *NaiveNestedJoinNode) reset() error {
 	return resetPlanNode(njn)
+}
+
+func (njn *NaiveNestedJoinNode) setInputs(inps []PlanNode) {
+	njn.inputs = inps
 }
 
 func combineTuples(t1 Tuple, t2 Tuple) Tuple { // assuming no keys of the same name
