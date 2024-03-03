@@ -24,6 +24,9 @@ func TestNestedJoin(t *testing.T) {
 		{
 			nestedJoinNode: &NaiveNestedJoinNode{headers: []string{"movieId", "movieId"}},
 		},
+		{
+			nestedJoinNode: &PageNestedJoinNode{headers: []string{"movieId", "movieId"}},
+		},
 	}
 
 	for _, test := range tc {
