@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/chettriyuvraj/query-executor/ycfile"
@@ -18,7 +19,24 @@ type PlanNode interface { /* This is the iterator interface, every PlanNode will
 	init() error
 	next() (Tuple, error)
 	close() error
+	reset() error
 	getInputs() ([]PlanNode, error)
+}
+
+func resetPlanNode(pn PlanNode) error {
+	inps, err := pn.getInputs()
+	if err != nil {
+		return err
+	}
+
+	for _, inp := range inps {
+		err := inp.reset()
+		if err != nil {
+			return err
+		}
+	}
+
+	return err
 }
 
 type ScanNode interface { // ended up unused, but scan nodes should ideally implement this
@@ -69,6 +87,10 @@ func (tn *TableScanNode) close() error {
 
 func (tn *TableScanNode) getInputs() ([]PlanNode, error) {
 	return tn.inputs, nil
+}
+
+func (tn *TableScanNode) reset() error {
+	return resetPlanNode(tn)
 }
 
 /*** CSV Scan Node ***/
@@ -133,7 +155,12 @@ func (csvn *CSVScanNode) getInputs() ([]PlanNode, error) {
 	return csvn.inputs, nil
 }
 
-/*** File Scan Node ***/
+func (csvn *CSVScanNode) reset() error {
+	csvn.idx = 0
+	return csvn.init()
+}
+
+/*** YCF File Scan Node ***/
 
 type FileScanNode struct {
 	idx    int
@@ -173,6 +200,10 @@ func (fsn *FileScanNode) close() error {
 
 func (fsn *FileScanNode) getInputs() ([]PlanNode, error) {
 	return fsn.inputs, nil
+}
+
+func (fsn *FileScanNode) reset() error {
+	return nil // TO DO: implement reset
 }
 
 func ycfRecordToTuple(ycfRecord ycfile.YCFileRecord) Tuple {
@@ -228,6 +259,10 @@ func (pn *ProjectionNode) getInputs() ([]PlanNode, error) {
 	return pn.inputs, nil
 }
 
+func (pn *ProjectionNode) reset() error {
+	return resetPlanNode(pn)
+}
+
 /*** Limit Node ***/
 type LimitNode struct {
 	offset int
@@ -259,6 +294,10 @@ func (ln *LimitNode) close() error {
 
 func (ln *LimitNode) getInputs() ([]PlanNode, error) {
 	return ln.inputs, nil
+}
+
+func (ln *LimitNode) reset() error {
+	return resetPlanNode(ln)
 }
 
 /*** Filter Node ***/
@@ -303,6 +342,64 @@ func (fn *FilterNode) getInputs() ([]PlanNode, error) {
 	return fn.inputs, nil
 }
 
+func (fn *FilterNode) reset() error {
+	return resetPlanNode(fn)
+}
+
+/*** Average Node ***/
+type AvgNode struct { // single condition
+	header string // header on which we are checking average
+	inputs []PlanNode
+}
+
+func (an *AvgNode) init() error {
+	return nil
+}
+
+func (an *AvgNode) next() (Tuple, error) {
+	var total float64
+	count := 0
+	for {
+		nextTuple, err := an.inputs[0].next()
+		if err != nil {
+			return Tuple{}, err
+		}
+
+		if nextTuple.data == nil {
+			break
+		}
+
+		field := nextTuple.data[an.header]
+		switch f := field.(type) {
+		case string: // assuming only strings for now
+			v, err := strconv.ParseFloat(f, 64)
+			if err != nil {
+				return Tuple{}, err
+			}
+			total += v
+			count++
+		}
+	}
+
+	if count == 0 {
+		return Tuple{}, nil
+	}
+
+	return Tuple{data: map[string]interface{}{"average": total / float64(count)}}, nil
+}
+
+func (an *AvgNode) close() error {
+	return nil
+}
+
+func (an *AvgNode) getInputs() ([]PlanNode, error) {
+	return an.inputs, nil
+}
+
+func (an *AvgNode) reset() error {
+	return resetPlanNode(an)
+}
+
 /*** IndexScan Node ***/
 
 // type IndexScanNode struct { // single condition
@@ -345,3 +442,80 @@ func (fn *FilterNode) getInputs() ([]PlanNode, error) {
 // func (fn *IndexScanNode) getInputs() ([]PlanNode, error) {
 // 	return fn.inputs, nil
 // }
+
+/*** Nested Join Node ***/
+
+type NestedJoinNode struct { // single condition
+	headers []string // headers on which we are doing the join -> inputs[0] -> header[0] -> inputs[1] -> headers[1]
+	inputs  []PlanNode
+	res     []Tuple
+	idx     int
+}
+
+func (njn *NestedJoinNode) init() error {
+	return nil
+}
+
+func (njn *NestedJoinNode) next() (Tuple, error) {
+	idx := 0
+
+	if njn.idx == 0 {
+		inp1, inp2 := njn.inputs[0], njn.inputs[1]
+		h1, h2 := njn.headers[0], njn.headers[1]
+
+		for t1, err := inp1.next(); t1.data != nil; t1, err = inp1.next() {
+			if err != nil {
+				return Tuple{}, err
+			}
+
+			idx++
+			fmt.Println(idx)
+
+			for t2, err := inp2.next(); t2.data != nil; t2, err = inp2.next() {
+				if err != nil {
+					return Tuple{}, err
+				}
+
+				if t1.data[h1] == t2.data[h2] {
+					njn.res = append(njn.res, combineTuples(t1, t2))
+				}
+			}
+			err := inp2.reset()
+			if err != nil {
+				return Tuple{}, err
+			}
+		}
+	}
+
+	if njn.idx >= len(njn.res) {
+		return Tuple{}, nil
+	}
+
+	resTuple := njn.res[njn.idx]
+	njn.idx++
+	return resTuple, nil
+
+}
+
+func (njn *NestedJoinNode) close() error {
+	return nil
+}
+
+func (njn *NestedJoinNode) getInputs() ([]PlanNode, error) {
+	return njn.inputs, nil
+}
+
+func (njn *NestedJoinNode) reset() error {
+	return resetPlanNode(njn)
+}
+
+func combineTuples(t1 Tuple, t2 Tuple) Tuple { // assuming no keys of the same name
+	ct := Tuple{data: map[string]interface{}{}}
+	for k, v := range t1.data {
+		ct.data[k] = v
+	}
+	for k, v := range t2.data {
+		ct.data[k] = v
+	}
+	return ct
+}
