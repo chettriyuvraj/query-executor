@@ -11,6 +11,8 @@ import (
 	"github.com/chettriyuvraj/query-executor/ycfile"
 )
 
+const PAGESIZE = 8196
+
 type Tuple struct {
 	data map[string]interface{}
 }
@@ -443,22 +445,20 @@ func (an *AvgNode) reset() error {
 // 	return fn.inputs, nil
 // }
 
-/*** Nested Join Node ***/
+/*** Naive Nested Join Node ***/
 
-type NestedJoinNode struct { // single condition
+type NaiveNestedJoinNode struct { // single condition
 	headers []string // headers on which we are doing the join -> inputs[0] -> header[0] -> inputs[1] -> headers[1]
 	inputs  []PlanNode
 	res     []Tuple
 	idx     int
 }
 
-func (njn *NestedJoinNode) init() error {
+func (njn *NaiveNestedJoinNode) init() error {
 	return nil
 }
 
-func (njn *NestedJoinNode) next() (Tuple, error) {
-	idx := 0
-
+func (njn *NaiveNestedJoinNode) next() (Tuple, error) {
 	if njn.idx == 0 {
 		inp1, inp2 := njn.inputs[0], njn.inputs[1]
 		h1, h2 := njn.headers[0], njn.headers[1]
@@ -467,9 +467,6 @@ func (njn *NestedJoinNode) next() (Tuple, error) {
 			if err != nil {
 				return Tuple{}, err
 			}
-
-			idx++
-			fmt.Println(idx)
 
 			for t2, err := inp2.next(); t2.data != nil; t2, err = inp2.next() {
 				if err != nil {
@@ -497,15 +494,15 @@ func (njn *NestedJoinNode) next() (Tuple, error) {
 
 }
 
-func (njn *NestedJoinNode) close() error {
+func (njn *NaiveNestedJoinNode) close() error {
 	return nil
 }
 
-func (njn *NestedJoinNode) getInputs() ([]PlanNode, error) {
+func (njn *NaiveNestedJoinNode) getInputs() ([]PlanNode, error) {
 	return njn.inputs, nil
 }
 
-func (njn *NestedJoinNode) reset() error {
+func (njn *NaiveNestedJoinNode) reset() error {
 	return resetPlanNode(njn)
 }
 

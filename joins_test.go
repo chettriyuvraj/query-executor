@@ -16,7 +16,7 @@ func TestNaiveNestedJoin(t *testing.T) {
 		planNode: &AvgNode{
 			header: "rating",
 			inputs: []PlanNode{
-				&NestedJoinNode{
+				&NaiveNestedJoinNode{
 					headers: []string{"movieId", "movieId"},
 					inputs: []PlanNode{
 						&CSVScanNode{
