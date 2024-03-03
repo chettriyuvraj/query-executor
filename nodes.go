@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"unsafe"
 
 	"github.com/chettriyuvraj/query-executor/ycfile"
 )
@@ -488,7 +489,7 @@ func (njn *NaiveNestedJoinNode) init() error {
 }
 
 func (njn *NaiveNestedJoinNode) next() (Tuple, error) {
-	if njn.idx == 0 {
+	if njn.idx == 0 { // if join hasn't been performed - first perform complete join and then return elems one by one
 		inp1, inp2 := njn.inputs[0], njn.inputs[1]
 		h1, h2 := njn.headers[0], njn.headers[1]
 
@@ -548,4 +549,106 @@ func combineTuples(t1 Tuple, t2 Tuple) Tuple { // assuming no keys of the same n
 		ct.data[k] = v
 	}
 	return ct
+}
+
+/*** Page Oriented Nested Join ***/
+
+type PageNestedJoinNode struct { // single condition
+	headers       []string // headers on which we are doing the join -> inputs[0] -> header[0] -> inputs[1] -> headers[1]
+	inputs        []PlanNode
+	res           []Tuple
+	idx           int
+	carryOverData Tuple
+}
+
+func (njn *PageNestedJoinNode) init() error {
+	return nil
+}
+
+func (njn *PageNestedJoinNode) next() (Tuple, error) { // TODO: Refactor and make it easier to read
+	if njn.idx == 0 { // if join hasn't been performed - first perform complete join and then return elems one by one
+		inp1, inp2 := njn.inputs[0], njn.inputs[1]
+		h1, h2 := njn.headers[0], njn.headers[1]
+
+		for {
+			/* Check if any data exists either in input or as carryover from previous pass */
+			t1, err := inp1.next()
+			if err != nil {
+				return Tuple{}, err
+			}
+
+			if t1.data == nil && njn.carryOverData.data == nil {
+				break
+			}
+
+			/* Create page slice, add carry over data from last pass, and fill page until PAGESIZE data is filled */
+			page1data := []Tuple{t1}
+			page1Size := sizeOfTuple(t1)
+			if njn.carryOverData.data != nil {
+				page1data = append(page1data, njn.carryOverData)
+				page1Size += sizeOfTuple(njn.carryOverData)
+			}
+
+			for njn.carryOverData, err = inp1.next(); njn.carryOverData.data != nil && page1Size+sizeOfTuple(njn.carryOverData) <= PAGESIZE; njn.carryOverData, err = inp1.next() {
+				if err != nil {
+					return Tuple{}, err
+				}
+				page1data = append(page1data, njn.carryOverData)
+				page1Size += sizeOfTuple(njn.carryOverData)
+			}
+
+			/* Join created page with all pages of other table */
+			for _, t1 := range page1data {
+				for t2, err := inp2.next(); t2.data != nil; t2, err = inp2.next() {
+					if err != nil {
+						return Tuple{}, err
+					}
+
+					if t1.data[h1] == t2.data[h2] {
+						njn.res = append(njn.res, combineTuples(t1, t2))
+					}
+				}
+			}
+
+			/* Reset input2 for next iteration */
+			err = inp2.reset()
+			if err != nil {
+				return Tuple{}, err
+			}
+		}
+	}
+
+	if njn.idx >= len(njn.res) {
+		return Tuple{}, nil
+	}
+
+	resTuple := njn.res[njn.idx]
+	njn.idx++
+	return resTuple, nil
+
+}
+
+func (njn *PageNestedJoinNode) close() error {
+	return nil
+}
+
+func (njn *PageNestedJoinNode) getInputs() ([]PlanNode, error) {
+	return njn.inputs, nil
+}
+
+func (njn *PageNestedJoinNode) reset() error {
+	return resetPlanNode(njn)
+}
+
+func (njn *PageNestedJoinNode) setInputs(inps []PlanNode) {
+	njn.inputs = inps
+}
+
+// rough size of a tuple, counting simply the key, value sizes and excluding the overhead of the Tuple structure itself
+func sizeOfTuple(t Tuple) int {
+	size := 0
+	for k, v := range t.data {
+		size += len(k) + int(unsafe.Sizeof(v))
+	}
+	return size
 }
