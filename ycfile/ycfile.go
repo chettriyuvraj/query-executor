@@ -59,6 +59,7 @@ type YCFileReader struct {
 //     - Next 1 byte * number of field bits for indicating their type (00 ss, 01 sm, 10 sl) (not very efficient)
 //     - First record indicates the column names, all of type sl (always)
 //     - next 'n' records are the actual tuples, the records are of types indicated by the fieldtype bytes in the same order
+// Note: I realized later this is the PAGE header so no point of reserving 8 bytes for number of records
 
 func CreateYCFile(path string, fields []string, fieldTypes []byte) error {
 	if len(fields) > MAXFIELDS {
@@ -360,32 +361,8 @@ func (ycf *YCFile) computeSizeOfARecord() int {
 	return sizeOfRecord
 }
 
-func (ycf *YCFile) getHeaderLength() int {
-	fieldCount := int(ycf.headerFieldCount[0])
-	return 4 + 8 + 1 + fieldCount + (FIELDTYPESTOLENGTH[2] * fieldCount) // refer to header format
-}
-
-func (ycf *YCFile) getMagicNumberFromHeader(b []byte) []byte {
-	return b[:4]
-}
-
-func (ycf *YCFile) getRecordCountFromHeader(b []byte) []byte {
-	return b[4:12]
-}
-
-func (ycf *YCFile) getFieldCountFromHeader(b []byte) []byte {
-	return b[12:13]
-}
-
-func (ycf *YCFile) getFieldTypesFromHeader(b []byte, fieldCount int) []byte {
-	return b[13 : 13+fieldCount]
-}
-
-func (ycf *YCFile) getFieldsFromHeader(b []byte, fieldCount int) []byte {
-	return b[13+fieldCount : 13+fieldCount+(FIELDTYPESTOLENGTH[2]*3)]
-}
-
 // func (ycf *YCFile) computePageSize() int { // returns page size in bytes: header + records
-// 	header := 13 // magic number + number of records header + number of fields header
+// 	headerLength := ycf.getHeaderLength()
+// 	recordCount := int(binary.BigEndian.Uint64(ycf.headerRecordCount)) // number of records on a page won't
 
 // }

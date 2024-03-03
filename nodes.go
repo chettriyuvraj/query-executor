@@ -229,7 +229,6 @@ func (pn *ProjectionNode) getInputs() ([]PlanNode, error) {
 }
 
 /*** Limit Node ***/
-
 type LimitNode struct {
 	offset int
 	limit  int
@@ -303,3 +302,46 @@ func (fn *FilterNode) close() error {
 func (fn *FilterNode) getInputs() ([]PlanNode, error) {
 	return fn.inputs, nil
 }
+
+/*** IndexScan Node ***/
+
+// type IndexScanNode struct { // single condition
+// 	header   string // header on which we are checking condition
+// 	operator string
+// 	cmpValue string // assuming all values string for now
+// 	inputs   []PlanNode
+// }
+
+// func (fn *IndexScanNode) init() error {
+// 	return nil
+// }
+
+// func (fn *IndexScanNode) next() (Tuple, error) {
+// 	nextTuple, err := fn.inputs[0].next()
+// 	if err != nil {
+// 		return Tuple{}, err
+// 	}
+
+// 	if nextTuple.data != nil {
+// 		switch op := fn.operator; op {
+// 		case "=":
+// 			value, exists := nextTuple.data[fn.header]
+// 			if !exists {
+// 				return Tuple{}, fmt.Errorf("header %v doesn't exist to filter", fn.header)
+// 			}
+// 			if value != fn.cmpValue {
+// 				return fn.next()
+// 			}
+// 		}
+// 	}
+
+// 	return nextTuple, nil
+// }
+
+// func (fn *IndexScanNode) close() error {
+// 	return nil
+// }
+
+// func (fn *IndexScanNode) getInputs() ([]PlanNode, error) {
+// 	return fn.inputs, nil
+// }
