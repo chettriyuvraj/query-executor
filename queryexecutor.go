@@ -32,25 +32,29 @@ func (qe *QueryExecutor) ExecutePlan(qd *QueryDescriptor) ([]Tuple, error) {
 
 func (qe *QueryExecutor) InitPlan(qd *QueryDescriptor) error {
 	curNode := qd.planNode
-	for curNode != nil {
-		// init cur node
-		err := curNode.init()
+	return InitPlanNode(curNode)
+}
+
+func InitPlanNode(pn PlanNode) error {
+	if pn != nil {
+		err := pn.init()
 		if err != nil {
 			return err
 		}
 
-		// move to next node in pipeline
-		inputs, err := curNode.getInputs()
+		pnChildren, err := pn.getInputs()
 		if err != nil {
 			return err
 		}
-		if len(inputs) > 0 {
-			curNode = inputs[0] //assuming single input nodes always
-		} else {
-			curNode = nil
-		}
 
+		for _, pnChild := range pnChildren {
+			err := InitPlanNode(pnChild)
+			if err != nil {
+				return err
+			}
+		}
 	}
+
 	return nil
 }
 
