@@ -124,9 +124,11 @@ func main() {
 	}
 
 	queryExecutor := QueryExecutor{}
-	err := queryExecutor.Execute(&qd)
+	res, err := queryExecutor.ExecutePlan(&qd)
 	if err != nil {
 		fmt.Println(err)
 	}
+
+	fmt.Println(res)
 
 }
