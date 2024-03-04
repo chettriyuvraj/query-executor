@@ -58,26 +58,30 @@ func InitPlanNode(pn PlanNode) error {
 	return nil
 }
 
-func (qe *QueryExecutor) FinishPlan(qd *QueryDescriptor) error {
-	curNode := qd.planNode
-	for curNode != nil {
-		// close cur node
-		err := curNode.close()
+func ClosePlanNode(pn PlanNode) error {
+	if pn != nil {
+		err := pn.close()
 		if err != nil {
 			return err
 		}
 
-		// move to next node in the pipeline
-		inputs, err := curNode.getInputs()
+		pnChildren, err := pn.getInputs()
 		if err != nil {
 			return err
 		}
 
-		if len(inputs) > 0 {
-			curNode = inputs[0] //assuming single input nodes always
-		} else {
-			curNode = nil
+		for _, pnChild := range pnChildren {
+			err := ClosePlanNode(pnChild)
+			if err != nil {
+				return err
+			}
 		}
 	}
+
 	return nil
+}
+
+func (qe *QueryExecutor) FinishPlan(qd *QueryDescriptor) error {
+	curNode := qd.planNode
+	return ClosePlanNode(curNode)
 }
