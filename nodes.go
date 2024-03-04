@@ -7,7 +7,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"unsafe"
 
 	"github.com/chettriyuvraj/query-executor/ycfile"
 )
@@ -551,21 +550,22 @@ func combineTuples(t1 Tuple, t2 Tuple) Tuple { // assuming no keys of the same n
 	return ct
 }
 
-/*** Page Oriented Nested Join ***/
+/*** Chunk Oriented Nested Join - For Page Oriented Nested Join, simply set the numberOfPages to 1 ***/
 
-type PageNestedJoinNode struct { // single condition
+type ChunkNestedJoinNode struct { // single condition
 	headers       []string // headers on which we are doing the join -> inputs[0] -> header[0] -> inputs[1] -> headers[1]
 	inputs        []PlanNode
 	res           []Tuple
 	idx           int
+	numberOfPages int // number of r1 pages to hold in memory before iterating over r2
 	carryOverData Tuple
 }
 
-func (njn *PageNestedJoinNode) init() error {
+func (njn *ChunkNestedJoinNode) init() error {
 	return nil
 }
 
-func (njn *PageNestedJoinNode) next() (Tuple, error) { // TODO: Refactor and make it easier to read
+func (njn *ChunkNestedJoinNode) next() (Tuple, error) { // TODO: Refactor and make it easier to read
 	if njn.idx == 0 { // if join hasn't been performed - first perform complete join and then return elems one by one
 		inp1, inp2 := njn.inputs[0], njn.inputs[1]
 		h1, h2 := njn.headers[0], njn.headers[1]
@@ -589,7 +589,7 @@ func (njn *PageNestedJoinNode) next() (Tuple, error) { // TODO: Refactor and mak
 				page1Size += sizeOfTuple(njn.carryOverData)
 			}
 
-			for njn.carryOverData, err = inp1.next(); njn.carryOverData.data != nil && page1Size+sizeOfTuple(njn.carryOverData) <= PAGESIZE; njn.carryOverData, err = inp1.next() {
+			for njn.carryOverData, err = inp1.next(); njn.carryOverData.data != nil && page1Size+sizeOfTuple(njn.carryOverData) <= PAGESIZE*njn.numberOfPages; njn.carryOverData, err = inp1.next() {
 				if err != nil {
 					return Tuple{}, err
 				}
@@ -628,27 +628,18 @@ func (njn *PageNestedJoinNode) next() (Tuple, error) { // TODO: Refactor and mak
 
 }
 
-func (njn *PageNestedJoinNode) close() error {
+func (njn *ChunkNestedJoinNode) close() error {
 	return nil
 }
 
-func (njn *PageNestedJoinNode) getInputs() ([]PlanNode, error) {
+func (njn *ChunkNestedJoinNode) getInputs() ([]PlanNode, error) {
 	return njn.inputs, nil
 }
 
-func (njn *PageNestedJoinNode) reset() error {
+func (njn *ChunkNestedJoinNode) reset() error {
 	return resetPlanNode(njn)
 }
 
-func (njn *PageNestedJoinNode) setInputs(inps []PlanNode) {
+func (njn *ChunkNestedJoinNode) setInputs(inps []PlanNode) {
 	njn.inputs = inps
-}
-
-// rough size of a tuple, counting simply the key, value sizes and excluding the overhead of the Tuple structure itself
-func sizeOfTuple(t Tuple) int {
-	size := 0
-	for k, v := range t.data {
-		size += len(k) + int(unsafe.Sizeof(v))
-	}
-	return size
 }

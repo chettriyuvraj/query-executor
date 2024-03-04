@@ -7,7 +7,8 @@ import (
 )
 
 func TestNestedJoin(t *testing.T) {
-	pathMovies := "./assets/moviessmall.csv"
+	// pathMovies := "./assets/moviessmall.csv"
+	pathMovies := "./assets/moviesmid.csv"
 	pathRatings := "./assets/ratings.csv"
 	/* Common components */
 	qd := QueryDescriptor{cmd: COMMANDS["SELECT"], text: "SELECT AVG(r.rating) FROM movies m, ratings r WHERE r.movie_id = m.id AND r.movie_id = 1;",
@@ -22,10 +23,13 @@ func TestNestedJoin(t *testing.T) {
 		nestedJoinNode PlanNode
 	}{
 		{
-			nestedJoinNode: &NaiveNestedJoinNode{headers: []string{"movieId", "movieId"}},
+			nestedJoinNode: &NaiveNestedJoinNode{headers: []string{"movieId", "movieId"}}, // times out
 		},
 		{
-			nestedJoinNode: &PageNestedJoinNode{headers: []string{"movieId", "movieId"}},
+			nestedJoinNode: &ChunkNestedJoinNode{headers: []string{"movieId", "movieId"}, numberOfPages: 1}, // pageorientedNestedJoin - times out
+		},
+		{
+			nestedJoinNode: &ChunkNestedJoinNode{headers: []string{"movieId", "movieId"}, numberOfPages: 20},
 		},
 	}
 
