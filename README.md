@@ -125,3 +125,23 @@ Nested Loop Join
 
 - The naive version of nested loop join would simply involve reading the two files and running a predicate function
     - simply take in the path for the two files and the predicate and run
+
+### Thoughts post implementation
+
+- We are loosely keeping track of pagesize using unsafe.sizeof, how to make this stricter?
+- The algorithm itself wasn't very difficult to implement, difference in performance not quantified but noticeable when joining 100 pages times out on naive/page-oriented but completes in 10 seconds on chunk oriented
+
+
+Hash Join
+
+- Implementation
+    - Repeat for both tables
+        - Determine/set a page size and number of buffers
+        - Number of buffers would also be the number of partitions we will hash into (coarse grained)
+        - Hash tuples using a naive modulo function
+        - Each time a buffer is full write to disk -> Now we will naively partition this in disk as file 1, file 2 .. file (number of buffers)
+    - Label the smaller table as build table and the larger one as probe
+    - For each partition of the build:
+        - Bring it into memory and create a fine grained hash using golang maps
+        - Stream corresponding partition of s into memory (a block at a time), find it in map and append it into result
+        
