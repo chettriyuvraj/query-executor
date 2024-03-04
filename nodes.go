@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"unsafe"
 
 	"github.com/chettriyuvraj/query-executor/ycfile"
 )
@@ -643,3 +644,14 @@ func (njn *ChunkNestedJoinNode) reset() error {
 func (njn *ChunkNestedJoinNode) setInputs(inps []PlanNode) {
 	njn.inputs = inps
 }
+
+// rough size of a tuple, counting simply the key, value sizes and excluding the overhead of the Tuple structure itself
+func sizeOfTuple(t Tuple) int {
+	size := 0
+	for k, v := range t.data {
+		size += len(k) + int(unsafe.Sizeof(v))
+	}
+	return size
+}
+
+/* TODO: Index Nested Loop Join */
