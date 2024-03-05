@@ -148,8 +148,9 @@ Hash Join
 ## Thoughts post implementation
 
 - Spill to disk done in not very modular fashion, but works
-- There appears to be a bug where we are losing some tuples in the CreatePartition function
+- There appears to be a bug where we are losing some tuples in the CreatePartition function - fixed!
 - Was quite fun and challenging to implement
-- Create a function and call it at the start of defer to clean up the temp disk partition files created
+- Create a function and call it at the start of defer to clean up the temp disk partition files created - done!
 - Refactor!
+- Add benchmarking for various joins
         
