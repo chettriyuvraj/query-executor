@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -626,7 +627,6 @@ func (njn *ChunkNestedJoinNode) next() (Tuple, error) { // TODO: Refactor and ma
 	resTuple := njn.res[njn.idx]
 	njn.idx++
 	return resTuple, nil
-
 }
 
 func (njn *ChunkNestedJoinNode) close() error {
@@ -655,3 +655,244 @@ func sizeOfTuple(t Tuple) int {
 }
 
 /* TODO: Index Nested Loop Join */
+
+/*** Hash Join Node ***/
+
+type HashJoinNode struct {
+	reqHeaders     []string
+	res            []Tuple
+	idx            int
+	inputs         []PlanNode
+	partitionCount int
+	headersInOrder [][]string // order of headers in partition
+}
+
+func (hjn *HashJoinNode) init() error {
+	return nil
+}
+
+func (hjn *HashJoinNode) next() (Tuple, error) {
+	if hjn.idx == 0 { // if join hasn't been performed - first perform complete join and then return elems one by one
+		/* Create partitions */
+		err := hjn.createPartitions(hjn.inputs[0], hjn.reqHeaders[0], "./partitions/r/r", hjn.headersInOrder[0])
+		if err != nil {
+			return Tuple{}, err
+		}
+
+		err = hjn.createPartitions(hjn.inputs[1], hjn.reqHeaders[1], "./partitions/s/s", hjn.headersInOrder[1])
+		if err != nil {
+			return Tuple{}, err
+		}
+
+		joinHeaderIdxR, joinHeaderIdxS := searchStringInList(hjn.reqHeaders[0], hjn.headersInOrder[0]), searchStringInList(hjn.reqHeaders[1], hjn.headersInOrder[1])
+		if joinHeaderIdxR == -1 || joinHeaderIdxS == -1 {
+			return Tuple{}, fmt.Errorf("required header not in headersInOrderList")
+		}
+
+		/* Bring r's partitions into memory + create fine-grained hash map for it -> stream s corresponding partition into memory, match it with r's partition */
+		hashMapR := map[string]Tuple{}
+
+		for i := 0; i < hjn.partitionCount; i++ {
+			fr, err := os.Open(fmt.Sprintf("./partitions/r/r%s", strconv.Itoa(i)))
+			if err != nil {
+				if os.IsNotExist(err) {
+					continue
+				}
+				return Tuple{}, err
+			}
+			defer fr.Close()
+
+			scR := bufio.NewScanner(fr)
+			for scR.Scan() {
+				recordAsList := strings.Split(scR.Text(), ",")
+				tuple := stringListToTuple(recordAsList, hjn.headersInOrder[0])
+				hashKey := tuple.data[hjn.reqHeaders[0]].(string)
+				hashMapR[hashKey] = tuple
+			}
+			if err := scR.Err(); err != nil {
+				fmt.Fprintln(os.Stderr, "error reading r partition", err)
+			}
+
+			fs, err := os.Open(fmt.Sprintf("./partitions/s/s%s", strconv.Itoa(i)))
+			if err != nil {
+				if os.IsNotExist(err) {
+					continue
+				}
+				return Tuple{}, err
+			}
+			defer fs.Close()
+
+			scS := bufio.NewScanner(fs)
+			for scS.Scan() {
+				recordAsList := strings.Split(scS.Text(), ",")
+				tupleS := stringListToTuple(recordAsList, hjn.headersInOrder[1])
+				hashKey := tupleS.data[hjn.reqHeaders[0]].(string)
+				tupleR, exists := hashMapR[hashKey]
+				if exists {
+					hjn.res = append(hjn.res, combineTuples(tupleS, tupleR))
+				}
+			}
+			if err := scS.Err(); err != nil {
+				fmt.Fprintln(os.Stderr, "error reading s partition", err)
+			}
+		}
+
+	}
+
+	if hjn.idx >= len(hjn.res) {
+		return Tuple{}, nil
+	}
+
+	resTuple := hjn.res[hjn.idx]
+	hjn.idx++
+	return resTuple, nil
+}
+
+func (hjn *HashJoinNode) close() error {
+	return nil
+}
+
+func (hjn *HashJoinNode) getInputs() ([]PlanNode, error) {
+	return hjn.inputs, nil
+}
+
+func (hjn *HashJoinNode) reset() error {
+	return resetPlanNode(hjn)
+}
+
+func (hjn *HashJoinNode) setInputs(inps []PlanNode) {
+	hjn.inputs = inps
+}
+
+func (hjn *HashJoinNode) createPartitions(inp PlanNode, header string, pathPrefix string, headersInOrder []string) error {
+	type OpBuffer struct {
+		tuples []Tuple
+		size   int
+	}
+
+	carryOverData := Tuple{}
+	opBuffers := map[int]*OpBuffer{}
+
+	for {
+		/* Initialize input buffers */
+		inpBuffer, inpBufferSize := []Tuple{}, 0
+
+		if carryOverData.data != nil {
+			inpBuffer = append(inpBuffer, carryOverData)
+			inpBufferSize += sizeOfTuple(carryOverData)
+		}
+
+		/* Fill up input buffer */
+		for carryOverData, err := inp.next(); carryOverData.data != nil && inpBufferSize+sizeOfTuple(carryOverData) < PAGESIZE; carryOverData, err = inp.next() {
+			if err != nil {
+				return err
+			}
+			if carryOverData.data != nil {
+				inpBuffer = append(inpBuffer, carryOverData)
+				inpBufferSize += sizeOfTuple(carryOverData)
+			}
+		}
+
+		/* Partition input buffer records into correct output buffers */
+		for _, tuple := range inpBuffer {
+			int64Val, err := strconv.ParseInt(tuple.data[header].(string), 10, 32) // assuming tuples vals always returning as string for now
+			intVal := int(int64Val)
+			if err != nil {
+				return err
+			}
+
+			partitionIdx := intVal % hjn.partitionCount // assuming we always have int values which can be modulo-ed
+			_, exists := opBuffers[partitionIdx]        // find correct output buffer
+			if !exists {
+				opBuffers[partitionIdx] = &OpBuffer{}
+			}
+			opBuffer := opBuffers[partitionIdx]
+
+			if opBuffer.size+sizeOfTuple(tuple) > PAGESIZE { // flush output buffer to disk if filled up
+
+				err := hjn.flushPartitionToDisk(opBuffer.tuples, fmt.Sprintf("%s%s", pathPrefix, strconv.Itoa(partitionIdx)), headersInOrder)
+				if err != nil {
+					return err
+				}
+
+				opBuffer.tuples = []Tuple{}
+				opBuffer.size = 0
+			}
+
+			opBuffer.tuples = append(opBuffer.tuples, tuple)
+			opBuffer.size += sizeOfTuple(tuple)
+		}
+
+		/* Checking if next iteration to be performed i.e. if all records already partitioned*/
+		if carryOverData.data == nil {
+			carryOverData, err := inp.next()
+			if err != nil {
+				return err
+			}
+			if carryOverData.data == nil {
+				break
+			}
+		}
+
+	}
+
+	/* Flushing all output buffers that have not been */
+	for partitionIdx, opBuffer := range opBuffers {
+		err := hjn.flushPartitionToDisk(opBuffer.tuples, fmt.Sprintf("%s%s", pathPrefix, strconv.Itoa(partitionIdx)), headersInOrder)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (hjn *HashJoinNode) flushPartitionToDisk(tuples []Tuple, path string, headersInOrder []string) error {
+	if len(tuples) == 0 {
+		return nil
+	}
+
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0777)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	buf := new(bytes.Buffer)
+	for _, tuple := range tuples {
+		for i, header := range headersInOrder {
+			v := tuple.data[header]
+			vAsString := v.(string) //assuming tuple data value always of type string, for now
+			buf.WriteString(vAsString)
+			if i < len(tuple.data)-1 {
+				buf.WriteString(",")
+			}
+		}
+		buf.WriteString("\n")
+	}
+
+	_, err = f.Write(buf.Bytes())
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func searchStringInList(s string, l []string) int {
+	for i, s2 := range l {
+		if s == s2 {
+			return i
+		}
+	}
+	return -1
+}
+
+func stringListToTuple(values []string, headers []string) Tuple {
+	tuple := Tuple{data: map[string]interface{}{}}
+	for i, header := range headers {
+		value := values[i]
+		tuple.data[header] = value
+	}
+	return tuple
+}
