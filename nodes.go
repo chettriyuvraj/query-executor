@@ -672,9 +672,26 @@ func (hjn *HashJoinNode) init() error {
 }
 
 func (hjn *HashJoinNode) next() (Tuple, error) {
+	defer func() {
+		os.RemoveAll("./partitions")
+	}()
+
 	if hjn.idx == 0 { // if join hasn't been performed - first perform complete join and then return elems one by one
+		err := os.Mkdir("./partitions", 0777)
+		if err != nil {
+			return Tuple{}, err
+		}
+		err = os.Mkdir("./partitions/r", 0777)
+		if err != nil {
+			return Tuple{}, err
+		}
+		err = os.Mkdir("./partitions/s", 0777)
+		if err != nil {
+			return Tuple{}, err
+		}
+
 		/* Create partitions */
-		err := hjn.createPartitions(hjn.inputs[0], hjn.reqHeaders[0], "./partitions/r/r", hjn.headersInOrder[0])
+		err = hjn.createPartitions(hjn.inputs[0], hjn.reqHeaders[0], "./partitions/r/r", hjn.headersInOrder[0])
 		if err != nil {
 			return Tuple{}, err
 		}
@@ -770,26 +787,33 @@ func (hjn *HashJoinNode) createPartitions(inp PlanNode, header string, pathPrefi
 		size   int
 	}
 
-	carryOverData := Tuple{}
+	carryOverRecord := Tuple{}
 	opBuffers := map[int]*OpBuffer{}
 
 	for {
 		/* Initialize input buffers */
 		inpBuffer, inpBufferSize := []Tuple{}, 0
 
-		if carryOverData.data != nil {
-			inpBuffer = append(inpBuffer, carryOverData)
-			inpBufferSize += sizeOfTuple(carryOverData)
+		if carryOverRecord.data != nil {
+			inpBuffer = append(inpBuffer, carryOverRecord)
+			inpBufferSize += sizeOfTuple(carryOverRecord)
 		}
 
-		/* Fill up input buffer */
-		for carryOverData, err := inp.next(); carryOverData.data != nil && inpBufferSize+sizeOfTuple(carryOverData) < PAGESIZE; carryOverData, err = inp.next() {
+		/* Fill up input buffer till PAGESIZE */
+		for {
+			record, err := inp.next()
 			if err != nil {
 				return err
 			}
-			if carryOverData.data != nil {
-				inpBuffer = append(inpBuffer, carryOverData)
-				inpBufferSize += sizeOfTuple(carryOverData)
+
+			if record.data == nil || inpBufferSize+sizeOfTuple(record) > PAGESIZE {
+				carryOverRecord = record
+				break
+			}
+
+			if record.data != nil {
+				inpBuffer = append(inpBuffer, record)
+				inpBufferSize += sizeOfTuple(record)
 			}
 		}
 
@@ -824,14 +848,15 @@ func (hjn *HashJoinNode) createPartitions(inp PlanNode, header string, pathPrefi
 		}
 
 		/* Checking if next iteration to be performed i.e. if all records already partitioned*/
-		if carryOverData.data == nil {
-			carryOverData, err := inp.next()
+		if carryOverRecord.data == nil {
+			record, err := inp.next()
 			if err != nil {
 				return err
 			}
-			if carryOverData.data == nil {
+			if record.data == nil {
 				break
 			}
+			carryOverRecord = record
 		}
 
 	}
@@ -868,7 +893,7 @@ func (hjn *HashJoinNode) flushPartitionToDisk(tuples []Tuple, path string, heade
 				buf.WriteString(",")
 			}
 		}
-		buf.WriteString("\n")
+		buf.WriteString("\r\n")
 	}
 
 	_, err = f.Write(buf.Bytes())
