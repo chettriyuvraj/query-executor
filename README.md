@@ -144,4 +144,12 @@ Hash Join
     - For each partition of the build:
         - Bring it into memory and create a fine grained hash using golang maps
         - Stream corresponding partition of s into memory (a block at a time), find it in map and append it into result
+
+## Thoughts post implementation
+
+- Spill to disk done in not very modular fashion, but works
+- There appears to be a bug where we are losing some tuples in the CreatePartition function
+- Was quite fun and challenging to implement
+- Create a function and call it at the start of defer to clean up the temp disk partition files created
+- Refactor!
         
