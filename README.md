@@ -1,5 +1,9 @@
 # README
 
+Note: This is a mangled collection of thoughts post implementing each part of the query-executor. I have to rewrite this readme
+
+All components discussed in the README have been implemented except the B+ tree, which seems to have a lot of edge cases - will implement it bit-by-bit over the coming week.
+
 ## Query Executor
 
 ### Plan
